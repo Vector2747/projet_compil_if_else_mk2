@@ -208,7 +208,7 @@ public class parcer{
     
     public static class programmeNoeud implements noeud{
         public final List<noeud> mots;
-        private int position;
+        private final int position;
         public programmeNoeud(List<noeud> mots){
             this.mots = mots;
             this.position = 0;
@@ -226,11 +226,29 @@ public class parcer{
         public final noeud_de_condition condition;
         public final block_de_noeuds blockAlors;
         public final block_de_noeuds block_sinon;
+        public final noeud_sinonSi block_sinonSi;
 
-        public noeud_si(noeud_de_condition condition, block_de_noeuds blockAlors, block_de_noeuds block_sinon) {
+        public noeud_si(noeud_de_condition condition, block_de_noeuds blockAlors, block_de_noeuds block_sinon, noeud_sinonSi block_sinonSi) {
             this.condition = condition;
             this.blockAlors = blockAlors;
             this.block_sinon = block_sinon;
+            this.block_sinonSi = block_sinonSi;
+        }
+        
+    }
+    
+    // c'est pour les noeuds de type "if","then" et "else"
+    public static class noeud_sinonSi implements noeud{
+        public final noeud_de_condition condition;
+        public final block_de_noeuds blockAlors;
+        public final block_de_noeuds block_sinon;
+        public final noeud_sinonSi block_sinonSi;
+
+        public noeud_sinonSi(noeud_de_condition condition, block_de_noeuds blockAlors, block_de_noeuds block_sinon, noeud_sinonSi block_sinonSi) {
+            this.condition = condition;
+            this.blockAlors = blockAlors;
+            this.block_sinon = block_sinon;
+            this.block_sinonSi = block_sinonSi;
         }
         
     }
@@ -262,11 +280,21 @@ public class parcer{
         public final String gauche;
         public final TokenType operateur;
         public final String droite;
+        
 
-        public noeud_de_condition(String gauche, TokenType operateur, String droite) {
+        public noeud_de_condition(String gauche, TokenType operateur, String droite, TokenType typeEnPlus, noeud_de_condition reste) {
             this.gauche = gauche;
             this.operateur = operateur;
-            this.droite = droite;
+            if(reste==null) {
+                this.droite = droite;
+            }else{
+                this.droite = droite +"   \""+ typeEnPlus +"\"   "+ reste.toElString();
+            }
+        }
+        
+        
+        public String toElString(){
+            return gauche + " " + operateur + " " + droite;
         }
     }
     
@@ -339,12 +367,14 @@ public class parcer{
         public final String modificateur;
         public final String typeRetour;
         public final String nom;
+        public final List<noeud> Pretour;
         public final List<noeud> instructions;
 
-        public MethodeNode(String modificateur, String typeRetour, String nom, List<noeud> instructions) {
+        public MethodeNode(String modificateur, String typeRetour, String nom, List<noeud> Pretour, List<noeud> instructions) {
             this.modificateur = modificateur;
             this.typeRetour = typeRetour;
             this.nom = nom;
+            this.Pretour = Pretour;
             this.instructions = instructions;
         }
 
@@ -353,6 +383,75 @@ public class parcer{
             return "Méthode: " + (modificateur != null ? modificateur + " " : "") + typeRetour + " " + nom + "()";
         }
     }
+    
+    public class noeud_parametre implements noeud{
+        public final String type;
+        public final String nom;
+
+        public noeud_parametre(String type, String nom) {
+            this.type = type;
+            this.nom = nom;
+        }
+
+        @Override
+        public String toString() {
+            return "Parametre : "+type+" "+nom;
+        }
+    }
+    
+    public class noeud_AIgnorer implements noeud{
+        private final String nom;
+
+        public noeud_AIgnorer(String nom) {
+            this.nom = nom;
+        }
+        
+        @Override
+        public String toString() {
+            return "bloc a ignorer : " + nom;
+        }
+
+        }
+
+    public class noeud_return implements noeud {
+        public noeud valeur;
+
+        public noeud_return(noeud valeur) {
+            this.valeur = valeur;
+        }
+
+        @Override
+        public String toString() {
+            return "return " + valeur;
+        }
+    }
+    
+    public class noeud_tafoukt implements noeud{
+        public noeud valeur;
+        
+        public noeud_tafoukt(noeud valeur){
+            this.valeur = valeur;
+        }
+        
+        @Override
+        public String toString() {
+            return "return tafoukt";
+        }
+    }
+    
+    public class noeud_zakaria implements noeud{
+        public noeud valeur;
+        
+        public noeud_zakaria(noeud valeur){
+            this.valeur = valeur;
+        }
+        
+        @Override
+        public String toString() {
+            return "zakaria = zakaria+1";
+        }
+    }
+
 
 
     
@@ -361,7 +460,7 @@ public class parcer{
     private List<token> tokens;
     private int pos;
     
-    private int dernierTokenErreur = -1;
+    private final int dernierTokenErreur = -1;
     public List<String> erreurs = new ArrayList<>();
     public List<String> getErreurs() {
         return erreurs;
@@ -383,7 +482,7 @@ public class parcer{
         if (verifier(TokenType.CLASS) || verifier(TokenType.PUBLIC) || verifier(TokenType.PRIVATE) || verifier(TokenType.PROTECTED)) {
             mots.add(parseClasse());
         } else {
-            mots.add(parcerMot());
+            mots.add(parcerMot(""));
         }
     }
         
@@ -419,7 +518,7 @@ public class parcer{
             }
             // Variable ou méthode sans modificateur
             else if (verifier(TokenType.INT) || verifier(TokenType.DOUBLE) || verifier(TokenType.CHAR)
-                    || verifier(TokenType.BOOLEAN) || verifier(TokenType.VOID)) {
+                    || verifier(TokenType.BOOLEAN) || verifier(TokenType.VOID) || verifier(TokenType.STRING) || verifier(TokenType.FLOAT) || verifier(TokenType.LONG) || verifier(TokenType.SHORT)) {
 
                 // Si le prochain token est un identifiant et que le suivant est '(' → méthode
                 if (examiner(1).type == TokenType.IDENTIFIER && examiner(2).type == TokenType.LPAREN) {
@@ -436,7 +535,7 @@ public class parcer{
             }
             // Autres instructions (if, assignation)
             else {
-                noeud instruction = parcerMot();
+                noeud instruction = parcerMot("");
                 if (instruction != null) membres.add(instruction);
             }
         }
@@ -448,8 +547,23 @@ public class parcer{
     }
 
     
-    public noeud parcerMot(){
+    public noeud parcerMot(String methode_courrante){
         System.out.println("dans le mot :"+examiner());
+        
+        if(verifier(TokenType.WHILE)){
+            return parcerWhile();
+        }else if(verifier(TokenType.FOR)){
+            return parcerFor();
+        }else if(verifier(TokenType.DO)){
+            return parcerDo();
+        }else if(verifier(TokenType.TAFOUKT)){
+            return parcerTafoukt();
+        }else if(verifier(TokenType.ZAKARIA)){
+            return parcerZakaria();
+        }else if (verifier(TokenType.RETURN)) {
+            return parcerReturn(methode_courrante);
+        }
+
         
         if (verifier(TokenType.LBRACE) || verifier(TokenType.RBRACE)) {
             // Ignorer les accolades hors contexte
@@ -469,7 +583,7 @@ public class parcer{
         // Appel de méthode ou autre instruction reconnue
         // NE PAS IGNORER les types ou void → parse les méthodes ou variables
         if (verifier(TokenType.VOID) || verifier(TokenType.INT) || verifier(TokenType.DOUBLE)
-                || verifier(TokenType.CHAR) || verifier(TokenType.BOOLEAN)
+                || verifier(TokenType.CHAR) || verifier(TokenType.BOOLEAN) || verifier(TokenType.STRING) || verifier(TokenType.FLOAT) || verifier(TokenType.LONG) || verifier(TokenType.SHORT)
                 || verifier(TokenType.PUBLIC) || verifier(TokenType.PRIVATE)
                 || verifier(TokenType.PROTECTED)) {
 
@@ -528,15 +642,77 @@ public class parcer{
         System.out.println("dans le if :"+examiner());
         // === Bloc 'else' ===
         block_de_noeuds sinon = null;
+        noeud_sinonSi sinonsi = null;
         if (correspond(TokenType.ELSE)) {
             if (!verifier(TokenType.LBRACE)) {
                 erreur("Attendu '{' pour commencer le bloc else.");
                 avancerJusqua("{", ";");
             }
             sinon = parcerBlock();
+        }else if (correspond(TokenType.ELSEIF)) {
+            
+            sinonsi = parcerSinonSi();
         }
     System.out.println("dans le if :"+condition+ alors+ sinon);
-        return new noeud_si(condition, alors, sinon);
+        return new noeud_si(condition, alors, sinon, sinonsi);
+    }
+    
+    public noeud_sinonSi parcerSinonSi() {
+        System.out.println("dans parcerSi");
+        consomer(TokenType.LPAREN, "Attendu '(' après 'if'.");
+
+        noeud_de_condition condition = parcerCondition();
+
+        boolean conditionValide = true;//(/*condition != null && condition.operateur != null || */condition.droite!="ERREUR");
+       System.out.println(conditionValide);
+       System.out.println(examiner());
+        // === Si condition invalide ===
+        if (!conditionValide) {
+            erreur("Condition invalide après 'if'.");
+            avancerJusqua(")", "{", "else", ";");
+            if (verifier(TokenType.RPAREN)) {
+                System.out.println("on a avances");
+                avancer();
+            }
+        }
+        // === Si condition valide ===
+
+        else {
+            if (verifier(TokenType.RPAREN)) {
+                System.out.println("on a avances2");
+                avancer();
+            } else {
+                System.out.println(examiner());
+                erreur("attendu ')' après la condition.");
+                avancerJusqua("{", "else", ";");
+
+            }
+        }
+
+        // === Bloc principal ===
+        block_de_noeuds alors = null;
+        if (conditionValide) {
+            alors = parcerBlock();
+        } else {
+            // On saute le bloc sans l'analyser pour éviter des erreurs parasites
+            avancerJusqua("else", ";");
+        }
+        System.out.println("dans le if :"+examiner());
+        // === Bloc 'else' ===
+        block_de_noeuds sinon = null;
+        noeud_sinonSi sinonsi = null;
+        if (correspond(TokenType.ELSE)) {
+            if (!verifier(TokenType.LBRACE)) {
+                erreur("Attendu '{' pour commencer le bloc else.");
+                avancerJusqua("{", ";");
+            }
+            sinon = parcerBlock();
+        }else if (correspond(TokenType.ELSEIF)) {
+            
+            sinonsi = parcerSinonSi();
+        }
+    System.out.println("dans le if :"+condition+ alors+ sinon);
+        return new noeud_sinonSi(condition, alors, sinon, sinonsi);
     }
 
 
@@ -558,7 +734,7 @@ public class parcer{
         List<noeud> mots = new ArrayList<>();
         System.out.println("dans le block :"+examiner());
         while (!verifier(TokenType.RBRACE) && !fin()) {
-            mots.add(parcerMot());
+            mots.add(parcerMot(""));
         }
         consomer(TokenType.RBRACE, "Attendu '}' pour fermer le bloc.");
         return new block_de_noeuds(mots,TypeBlock);
@@ -566,6 +742,11 @@ public class parcer{
     
     public noeud_de_condition parcerCondition() {
         System.out.println("dans parcerCondition");
+        boolean tr= false;
+        if(verifier(TokenType.LPAREN)){
+            tr = true;
+            consomer(TokenType.LPAREN, "Attendu une parenthese ouvrante '('.");
+        }
         token gauche = consomer(TokenType.IDENTIFIER, "Attendu un identificateur à gauche de la condition.");
         TokenType operateur = null;
 
@@ -582,12 +763,39 @@ public class parcer{
             // On saute juste jusqu’à la parenthèse fermante ou au début du bloc
             avancerJusqua(")", /*"{",*/ ";");
             System.out.println("dans la condition :"+examiner());
-            return new noeud_de_condition(gauche.lexeme, TokenType.EQEQ, "ERREUR");
+            return new noeud_de_condition(gauche.lexeme, TokenType.EQEQ, "ERREUR",null,null);
         }
 
         // lire la partie droite
-        token droite = consomerAUnDes(TokenType.IDENTIFIER, TokenType.NUMBER, "Attendu une valeur à droite de la condition.");
-        return new noeud_de_condition(gauche.lexeme, operateur, droite.lexeme);
+        token droite=null;
+        if(verifier(TokenType.STRINGVAL)){
+            droite = consomer(TokenType.STRINGVAL,"Attendu un stringval '\" valeur \"'.");
+        }else if(verifier(TokenType.CHARVAL)){
+            droite = consomer(TokenType.CHARVAL,"Attendu un stringval '\' valeur \''.");
+        }else{
+            droite = consomerAUnDes(TokenType.IDENTIFIER, TokenType.NUMBER, "Attendu une valeur à droite de la condition.");
+        }
+        
+        if (tr){
+            consomer(TokenType.RPAREN, "Attendu une parenthese fermante ')'.");
+        }
+        noeud_de_condition reste=null;
+        TokenType typeEnPlus = null;
+        if(verifier(TokenType.AND)){
+            typeEnPlus = TokenType.AND;
+            consomer(TokenType.AND, "Attendu une condition ET '&&'.");
+            reste = parcerCondition();
+        }else if (verifier(TokenType.OR)){
+            typeEnPlus = TokenType.OR;
+            consomer(TokenType.OR, "Attendu une condition OU '||'.");
+            reste = parcerCondition();
+        }
+        
+        
+        
+        
+        
+        return new noeud_de_condition(gauche.lexeme, operateur, droite.lexeme,typeEnPlus,reste);
     }
 
     
@@ -656,12 +864,24 @@ public class parcer{
         if (correspond(TokenType.NUMBER)) {
             System.out.println("dans le facteur (devant un nombre):"+examiner());
             return new noeud_de_valeur(TermeAvant().lexeme);
+        }else if(correspond(TokenType.STRINGVAL)){
+            System.out.println("dans le facteur (devant un nombre):"+examiner());
+            return new noeud_de_valeur(TermeAvant().lexeme);
+        }else if(correspond(TokenType.CHARVAL)){
+            System.out.println("dans le facteur (devant un nombre):"+examiner());
+            return new noeud_de_valeur(TermeAvant().lexeme);
         }
 
         // Identifiant (avec gestion du post ++/--)
         if (correspond(TokenType.IDENTIFIER)) {
+            
             token id = TermeAvant();
-
+            
+            if(verifier(TokenType.LBRACKET)){
+                consomer(TokenType.LBRACKET, "Attendu le nomcommun ouvrant '['.");
+                if(verifier(TokenType.IDENTIFIER) || verifier(TokenType.NUMBER)){parcerExpression();}
+                consomer(TokenType.RBRACKET, "Attendu le nomcommun ferment ']'.");
+            }
             // Vérifie s’il y a un post-incrément ou post-décrément juste après
             if (correspond(TokenType.INCREMENT) || correspond(TokenType.DECREMENT)) {
                 token oper = TermeAvant();
@@ -683,32 +903,43 @@ public class parcer{
         }
         
 
-    // Pré-incrément ++x / --x
-    if (correspond(TokenType.INCREMENT) || correspond(TokenType.DECREMENT)) {
-        token oper = TermeAvant();
-        token id = consomer(TokenType.IDENTIFIER, "Attendu un identifiant après ++/--.");
-        TokenType opType = (oper.type == TokenType.INCREMENT) ? TokenType.PLUS : TokenType.MINUS;
-        return new noeud_d_operation_binaire(opType, new noeud_de_valeur(id.lexeme), new noeud_de_valeur("1"));
-        }
-    
-    System.out.println("dans le facteur (avant de savoir si c'est faux ou vrai) :"+examiner());
-    
-    // Parenthèses
-    if (correspond(TokenType.LPAREN)) {
-        noeud expression = parcerExpression();
-        consomer(TokenType.RPAREN, "Attendu une ')' pour fermer l'expression .");
-        return expression;
-    }System.out.println("dans le facteur :"+examiner());
+        // Pré-incrément ++x / --x
+        if (correspond(TokenType.INCREMENT) || correspond(TokenType.DECREMENT)) {
+            token oper = TermeAvant();
+            token id = consomer(TokenType.IDENTIFIER, "Attendu un identifiant après ++/--.");
+            TokenType opType = (oper.type == TokenType.INCREMENT) ? TokenType.PLUS : TokenType.MINUS;
+            return new noeud_d_operation_binaire(opType, new noeud_de_valeur(id.lexeme), new noeud_de_valeur("1"));
+            }
 
-    erreur("Attendu un facteur arithmetique (nombre, identifiant, ou expression sous '()')");
-    reculer();
-    return null;
+        System.out.println("dans le facteur (avant de savoir si c'est faux ou vrai) :"+examiner());
+
+        // Parenthèses
+        if (correspond(TokenType.LPAREN)) {
+            noeud expression = parcerExpression();
+            consomer(TokenType.RPAREN, "Attendu une ')' pour fermer l'expression .");
+            return expression;
+        }System.out.println("dans le facteur :"+examiner());
+
+        if(verifier(TokenType.PLUS)|| verifier(TokenType.MINUS)){
+            avancer();
+            return parcerExpression();
+        }
+        erreur("Attendu un facteur arithmetique (nombre, identifiant, ou expression sous '()')");
+        reculer();
+        return null;
     }
     
     private noeud parseDeclarationVariable() {
         System.out.println("dans parcerDeclarationVariable");
         // Lire le type
         token typeTok = avancer(); // int, double, etc.
+        
+        if(verifier(TokenType.LBRACKET)){
+            consomer(TokenType.LBRACKET, "Attendu le nomcommun ouvrant '['.");
+            consomer(TokenType.RBRACKET, "Attendu le nomcommun ferment ']'.");
+        }
+        
+        
 
         // Lire le nom
         token nomTok = consomer(TokenType.IDENTIFIER, "Nom de variable attendu.");
@@ -747,7 +978,27 @@ public class parcer{
         System.out.println("type de retour :"+typeTok+"   nom de la methode (apres consomation):"+examiner(1));
         
         // 4) parenthèses
+        List<noeud> Pretour = new ArrayList();
         consomer(TokenType.LPAREN, "'(' attendu.");
+        if(verifier(TokenType.STRING) || verifier(TokenType.BOOLEAN) || verifier(TokenType.DOUBLE) || verifier(TokenType.INT) || verifier(TokenType.FLOAT) || verifier(TokenType.LONG) || verifier(TokenType.SHORT) || verifier(TokenType.CHAR)){
+            while(!fin() && !verifier(TokenType.RPAREN)){
+                if(verifier(TokenType.STRING) || verifier(TokenType.BOOLEAN) || verifier(TokenType.DOUBLE) || verifier(TokenType.INT) || verifier(TokenType.FLOAT) || verifier(TokenType.LONG) || verifier(TokenType.SHORT) || verifier(TokenType.CHAR)){
+                    Pretour.add(parcerParametres());
+                    if(verifier(TokenType.COMMA)){
+                        consomer(TokenType.COMMA, "Attendu une virgule (erreur relic).");
+                    }else{
+                        if(!verifier(TokenType.RPAREN)){
+                            erreur("Attendu une virgule entre les deux parametres");
+                        }
+                        break;
+                    }
+                }else{
+                    erreur("Op ,op, op, reveiw your code lil vro (attendu un vrai type.) ");
+                }
+                
+            }
+            
+        }
         consomer(TokenType.RPAREN, "')' attendu.");
 
         // 5) bloc
@@ -757,7 +1008,7 @@ public class parcer{
         while (!verifier(TokenType.RBRACE) && !fin()) {
             /*instructions.add(parcerMot());
             System.out.println("dans parcerMethode (apres instructions.add(parcerMot());)");*/
-            noeud instr = parcerMot();
+            noeud instr = parcerMot(typeTok.lexeme);
             if (instr != null) {
                 instructions.add(instr);
                 System.out.println("instruction ajoutée :" + instr);
@@ -770,8 +1021,155 @@ public class parcer{
 
         consomer(TokenType.RBRACE, "'}' attendu à la fin de la méthode.");
 
-        return new MethodeNode(modificateur, typeTok.lexeme, nomTok.lexeme, instructions);
+        return new MethodeNode(modificateur, typeTok.lexeme, nomTok.lexeme, Pretour, instructions);
     }
+    
+    public noeud parcerParametres(){
+        System.out.println("dans parcerParametres");
+        // Lire le type
+        token typeTok = avancer(); // int, double, etc.
+        
+        String crochets = null;
+        if(verifier(TokenType.LBRACKET)){
+            consomer(TokenType.LBRACKET, "Attendu le nomcommun ouvrant '['.");
+            crochets="[ ";
+            consomer(TokenType.RBRACKET, "Attendu le nomcommun ferment ']'.");
+            crochets+=']';
+        }
+        
+        
+
+        // Lire le nom
+        token nomTok = consomer(TokenType.IDENTIFIER, "Nom de variable attendu.");
+
+        
+        /*if(verifier(TokenType.COMMA)){
+            consomer(TokenType.COMMA, "Attendu une virgule (erreur relic).");
+        }*/
+        
+
+        
+        if(crochets==null){
+            return new noeud_parametre(typeTok.lexeme, nomTok.lexeme);
+        }
+        return new noeud_parametre(typeTok.lexeme+crochets, nomTok.lexeme);
+    }
+    
+    
+    public noeud parcerReturn(String currentMethodReturnType) {
+        if(!verifierReturn(currentMethodReturnType))return null;
+        consomer(TokenType.RETURN, "Attendu 'return'.");
+
+        // si la ligne est juste "return;"
+        if (verifier(TokenType.SEMICOLON)) {
+            avancer();
+            return new noeud_return(null);
+        }
+
+        // sinon : return expression;
+        noeud expr = parcerExpression();
+
+        consomer(TokenType.SEMICOLON, "Attendu ';' après return.");
+
+        return new noeud_return(expr);
+    }
+    
+    private boolean verifierReturn(String currentMethodReturnType) {
+        if ("void".equals(currentMethodReturnType)) {
+            erreur("Erreur : return utilisé dans une méthode void.");
+            return false;
+        }
+
+        if (!"void".equals(currentMethodReturnType)) {
+            // la méthode doit retourner quelque chose
+            if (verifier(TokenType.SEMICOLON, 1)) {
+                erreur("Erreur : return dans une méthode non-void sans valeur.");
+                return false;
+            }
+        }
+        return true;
+    }
+    public noeud parcerWhile(){
+        consomer(TokenType.WHILE, "Attendu 'While' (Erreur tres rare).");
+        consomer(TokenType.LPAREN, "Attendu une parenthese ouvrante '('.");
+        
+        while(!fin() && !verifier(TokenType.RPAREN)){
+            avancer();
+        }
+        
+        consomer(TokenType.RPAREN, "Attendu une parenthese fermente ')'.");
+        consomer(TokenType.LBRACE, "Attendu une acolade ouvrente '{'.");
+        
+        while(!fin() && !verifier(TokenType.RBRACE)){
+            avancer();
+        }
+        
+        consomer(TokenType.RBRACE, "Attendu une acolade fermente'}'.");
+        return new noeud_AIgnorer("while");
+    }
+    
+    public noeud parcerFor(){
+        consomer(TokenType.FOR, "Attendu 'While' (Erreur tres rare).");
+        consomer(TokenType.LPAREN, "Attendu une parenthese ouvrante '('.");
+        
+        while(!fin() && !verifier(TokenType.RPAREN)){
+            avancer();
+        }
+        
+        consomer(TokenType.RPAREN, "Attendu une parenthese fermente ')'.");
+        consomer(TokenType.LBRACE, "Attendu une acolade ouvrante '{'.");
+        
+        while(!fin() && !verifier(TokenType.RBRACE)){
+            avancer();
+        }
+        
+        consomer(TokenType.RBRACE, "Attendu une acolade fermente'}'.");
+        return new noeud_AIgnorer("for");
+    }
+    
+    public noeud parcerDo(){
+        consomer(TokenType.DO, "Attendu 'do' (Erreur tres rare).");
+        consomer(TokenType.LBRACE, "Attendu une acolade ouvrante '{'.");
+        
+        while(!fin() && !verifier(TokenType.RBRACE)){
+            avancer();
+        }
+        
+        consomer(TokenType.RBRACE, "Attendu une acolade fermente '}'.");
+        
+        consomer(TokenType.WHILE, "Attendu 'While'.");
+        consomer(TokenType.LPAREN, "Attendu une parenthese ouvrente '('.");
+        
+        consomer(TokenType.RPAREN, "Attendu une parenthese fermente ')'.");
+        
+        return new noeud_AIgnorer("while");
+    }
+    
+    public noeud parcerTafoukt(){
+        consomer(TokenType.TAFOUKT, "Attendu 'tafoukt' (erreur legendaire)");
+        consomer(TokenType.SEMICOLON, "Attendu une semicolonne ';'");
+        return new noeud_tafoukt(new noeud_d_asignation(
+                    "67",
+                    new noeud_d_operation_binaire(
+                        TokenType.TAFOUKT,
+                        new noeud_de_valeur("6"),
+                        new noeud_de_valeur("7")
+                    )));
+    }
+    
+    public noeud parcerZakaria(){
+        consomer(TokenType.ZAKARIA, "Attendu 'tafoukt' (erreur legendaire)");
+        consomer(TokenType.SEMICOLON, "Attendu une semicolonne ';'");
+        
+        return new noeud_zakaria(new noeud_d_asignation(
+                    "27",
+                    new noeud_d_operation_binaire(
+                        TokenType.TAFOUKT,
+                        new noeud_de_valeur("strength"),
+                        new noeud_de_valeur("patience")
+                    )));
+    }
+
 
 
 
@@ -834,49 +1232,35 @@ public class parcer{
         return tokens.get(pos--);
     }
     
-    /*private void erreur (String message){
-        token tokee = examiner();
-        String msg ="Erreur syntaxique près de '" + tokee.lexeme + "' (pos " + tokee.position + "): " + message;
-        
-        // éviter de répéter la même erreur sur le même token
-        if (tokee.position == dernierTokenErreur) {
-            synchroniser();
-            return;
-        }
-
-        dernierTokenErreur = tokee.position;
-        
-        erreurs.add(msg);
-        
-        
-        
-        synchroniser();
-    }*/
+    
     
     private void erreur(String message) {
-    token courant = examiner();
-    erreurs.add("Erreur près de '" + courant.lexeme + "' (pos " + courant.position + "): " + message);
-    System.out.println("Erreur près de '" + courant.lexeme + "' (pos " + courant.position + "): " + message);
-    // --- très important : consommer pour éviter boucle infinie
-    avancer();
-    
-    // --- option : synchroniser jusqu’à un séparateur connu
-    while (!fin()) {
-        token t = examiner();
-        if (t.lexeme.equals(";") || t.lexeme.equals("}") || t.lexeme.equals("{") || t.lexeme.equals("(") || t.lexeme.equals(")") || t.lexeme.equals("if") || t.lexeme.equals("else")) break;
-        avancer();
+        token courant = examiner();
+        erreurs.add("Erreur près de '" + courant.lexeme + "' (pos " + courant.position + "): " + message);
+        System.out.println("Erreur près de '" + courant.lexeme + "' (pos " + courant.position + "): " + message);
+        // --- très important : consommer pour éviter boucle infinie
+        if(!fin()){
+            avancer();
+        }
+
+
+        // --- option : synchroniser jusqu’à un séparateur connu
+        while (!fin()) {
+            token t = examiner();
+            if (t.lexeme.equals(";") || t.lexeme.equals("}") || t.lexeme.equals("{") || t.lexeme.equals("(") || t.lexeme.equals(")") || t.lexeme.equals("[") || t.lexeme.equals("]") || t.lexeme.equals("if") || t.lexeme.equals("else")  || t.lexeme.equals("else if") || verifier(TokenType.EOF,1)) break;
+            avancer();
+        }
     }
-}
     
     private void avancerJusqua(String... lexemesCibles) {
-    while (!fin()) {
-        token t = examiner();
-        for (String cible : lexemesCibles) {
-            if (t.lexeme.equals(cible)) return; // on s'arrête dès qu'on atteint un token cible
+        while (!fin()) {
+            token t = examiner();
+            for (String cible : lexemesCibles) {
+                if (t.lexeme.equals(cible)) return; // on s'arrête dès qu'on atteint un token cible
+            }
+            avancer();
         }
-        avancer();
     }
-}
 
 
     

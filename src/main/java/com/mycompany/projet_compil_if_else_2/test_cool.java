@@ -11,13 +11,12 @@ import java.util.List;
  *
  * @author InfoPro
  */
-//    c'est le fichier qui contiens l'analyseur lexical
-public class lexer {
+public class test_cool {
     // c'est ici qu'on fait les tokens 
         // en commencant par leurs type
     
     public enum TokenType{
-        IF,ELSE,ELSEIF,   //C'EST les types de trucs principales
+        IF,ELSE,   //C'EST les types de trucs principales
         LPAREN,RPAREN, // pour les parentheses
         LBRACE,RBRACE, // ca s'appele comme ca en anglais
         LBRACKET,RBRACKET, // pour les tableaux et vecteurs
@@ -38,7 +37,11 @@ public class lexer {
         PUBLIC,CLASS,
         STATIC,PRIVATE,PROTECTED,VOID,
         
-        INT,DOUBLE,FLOAT,LONG,SHORT,CHAR,STRING,BOOLEAN
+        INT,DOUBLE,FLOAT,LONG,SHORT,CHAR,STRING,BOOLEAN,
+        
+        
+        
+        LTAB, RTAB
     }
     
     // cette c'asse s'ocupe de donner ces valeurs a un token (elle est en statique pour et en final pour eviter le faite qu'ells soient touches apres (precotion))
@@ -64,10 +67,11 @@ public class lexer {
     private final String input;    // ce qu'on fait rentrer
     //private final int lenght;      // la taille de ce qu'on fait rentrer
     private int pos = 0;           // la position de ce qu'on fait rentrer
+    private int blud = 0;
     private final List<token> tokens = new ArrayList<>();  // la liste de tout les tokens
     
     
-    public lexer (String input){
+    public test_cool (String input){
         this.input = input +'∰';
         
     }
@@ -163,19 +167,9 @@ public class lexer {
                         String subMot = input.substring(start, pos);
                         if (subMot.equals("if")) {
                             tokens.add(new token(TokenType.IF, "if", start));
-                        }else if (subMot.equals("else")) {
-                            // sauter espaces et commentaires après else
-                            sauter_espaces();
-                            System.out.println(input.charAt(pos));
-                            // vérifier si "if" suit
-                            if (!fin() && input.startsWith("if", pos)) {
-                                pos += 2; // consommer "if"
-                                tokens.add(new token(TokenType.ELSEIF, "else if", start));
-                            } else {
-                                tokens.add(new token(TokenType.ELSE, "else", start));
-                            }
-                        }
-                         else if (subMot.equals("class")) {
+                        } else if (subMot.equals("else")) {
+                            tokens.add(new token(TokenType.ELSE, "else", start));
+                        } else if (subMot.equals("class")) {
                             tokens.add(new token(TokenType.CLASS, "class", start));
                         } else if (subMot.equals("public")) {
                             tokens.add(new token(TokenType.PUBLIC, "public", start));
@@ -282,6 +276,39 @@ public class lexer {
         }
     }
     
+    public void verif_si_tab(){
+        int d=0;
+        if(input.charAt(pos) == '\n'){
+            avancer();
+            while(input.charAt(pos) == '\t' || input.charAt(pos) == ' '){
+                if(input.charAt(pos)== ' '){
+                    int i,k=0;
+                    for(i=0;i<4;i++){
+                        if(input.charAt(pos+i)== ' '){
+                            k++;
+                        }else{
+                            break;
+                        }
+                    }pos+=i;
+                    if(k==4){
+                        d++;
+                    }
+                }else if(input.charAt(pos)== '\t'){
+                    d++;
+                    pos++;
+                }
+            }
+            
+            if(d<blud){
+                tokens.add(new token(TokenType.RTAB, "bloc fini", pos));
+                blud = d;
+            }else if(d>blud){
+                tokens.add(new token(TokenType.LTAB, "bloc commences", pos));
+                blud = d;
+            }
+        }
+    }
+    
     private char examiner(int i){
         System.out.println(input.charAt(pos+i));
         return fin() ? '\0' : input.charAt(pos+i);
@@ -300,27 +327,22 @@ public class lexer {
     }
     
     // sauter les espaces
-    private int sauter_espaces(){
-        int i=0;
+    private void sauter_espaces(){
         while(!fin()){
             char c = examiner();
             
             if((c ==' ')||(c=='\n')||(c=='\t')||(c=='\r')){
-                i++;
                 avancer();
             }else if (c == '/' && examiner(1) == '/') {
-                while (!fin() && examiner() != '\n'){i++; avancer();}
-            } else if (c == '/' && examiner(1) == '*') {
-                avancer(); avancer(); i+=2;
-                while (!fin() && !(examiner() == '*' && examiner(1) == '/')) {
-                    avancer(); i++;
-                }
-                if (!fin()) { avancer(); avancer(); i+=2; }
-            } else{
+            while (!fin() && examiner() != '\n') avancer();
+        } else if (c == '/' && examiner(1) == '*') {
+            avancer(); avancer();
+            while (!fin() && !(examiner() == '*' && examiner(1) == '/')) avancer();
+            if (!fin()) { avancer(); avancer(); }
+        } else{
                 break;
             }
         }
-        return i;
     }
     public List<String> erreurs = new ArrayList<>();
     // pour arreter le prog si erreur 
@@ -348,7 +370,7 @@ public class lexer {
     
     // pour verifier si c'est un alphabet
     private boolean est_alpha(char c){
-        if (((c>='A')&&(c<='Z')) || ((c>='a')&&(c<='z')) || (c=='_')){
+        if (((c>='A')&&(c<='Z'))||((c>='a')&&(c<='z'))){
             return true;
         }else{
             return false;
@@ -378,7 +400,7 @@ public class lexer {
     // 🧪 Petit test rapide
     public static void main(String[] args) {
         String code = /*"if (x > 0) { y = 1; } else { y = -1; }"*/"if (x > 0) { y = 1 + 2 * 3; } else { if(d=1{ y = -1; }else{d= ((sr+4)-2)*g}  f= c++;}";
-        lexer lexor = new lexer(code);
+        test_cool lexor = new test_cool(code);
         List<token> tokens = lexor.tokeniser();
         tokens.forEach(System.out::println);
     }

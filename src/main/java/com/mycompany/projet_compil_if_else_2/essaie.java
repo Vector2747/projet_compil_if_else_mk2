@@ -264,57 +264,57 @@ public essaie() {
     resetZoom.addActionListener(e -> arbrePanel.resetZoom());
     
     JButton ouvrirBtn = new JButton("📂 Ouvrir");
-JButton sauvegarderBtn = new JButton("💾 Sauvegarder");
+    JButton sauvegarderBtn = new JButton("💾 Sauvegarder");
 
-// Action : ouvrir un fichier et charger le texte dans le codeArea
-ouvrirBtn.addActionListener(e -> {
-    JFileChooser chooser = new JFileChooser();
-    int resultat = chooser.showOpenDialog(this);
-    if (resultat == JFileChooser.APPROVE_OPTION) {
-        File fichier = chooser.getSelectedFile();
-        try (BufferedReader lecteur = new BufferedReader(new FileReader(fichier))) {
-            StringBuilder contenu = new StringBuilder();
-            String ligne;
-            while ((ligne = lecteur.readLine()) != null) {
-                contenu.append(ligne).append("\n");
+    // Action : ouvrir un fichier et charger le texte dans le codeArea
+    ouvrirBtn.addActionListener(e -> {
+        JFileChooser chooser = new JFileChooser();
+        int resultat = chooser.showOpenDialog(this);
+        if (resultat == JFileChooser.APPROVE_OPTION) {
+            File fichier = chooser.getSelectedFile();
+            try (BufferedReader lecteur = new BufferedReader(new FileReader(fichier))) {
+                StringBuilder contenu = new StringBuilder();
+                String ligne;
+                while ((ligne = lecteur.readLine()) != null) {
+                    contenu.append(ligne).append("\n");
+                }
+                codeArea.setText(contenu.toString());
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(this, "Erreur lors de la lecture du fichier : " + ex.getMessage());
             }
-            codeArea.setText(contenu.toString());
-        } catch (IOException ex) {
-            JOptionPane.showMessageDialog(this, "Erreur lors de la lecture du fichier : " + ex.getMessage());
         }
-    }
-});
+    });
 
-// Action : sauvegarder le contenu du codeArea dans un fichier
-sauvegarderBtn.addActionListener(e -> {
-    JFileChooser chooser = new JFileChooser();
-    int resultat = chooser.showSaveDialog(this);
-    if (resultat == JFileChooser.APPROVE_OPTION) {
-        File fichier = chooser.getSelectedFile();
-        try (BufferedWriter ecrivain = new BufferedWriter(new FileWriter(fichier))) {
-            ecrivain.write(codeArea.getText());
-            JOptionPane.showMessageDialog(this, "Fichier sauvegardé avec succès !");
-        } catch (IOException ex) {
-            JOptionPane.showMessageDialog(this, "Erreur lors de la sauvegarde : " + ex.getMessage());
+    // Action : sauvegarder le contenu du codeArea dans un fichier
+    sauvegarderBtn.addActionListener(e -> {
+        JFileChooser chooser = new JFileChooser();
+        int resultat = chooser.showSaveDialog(this);
+        if (resultat == JFileChooser.APPROVE_OPTION) {
+            File fichier = chooser.getSelectedFile();
+            try (BufferedWriter ecrivain = new BufferedWriter(new FileWriter(fichier))) {
+                ecrivain.write(codeArea.getText());
+                JOptionPane.showMessageDialog(this, "Fichier sauvegardé avec succès !");
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(this, "Erreur lors de la sauvegarde : " + ex.getMessage());
+            }
         }
-    }
-});
+    });
 
-JButton resetBtn = new JButton("Réinitialiser");
-resetBtn.addActionListener(e -> reinitialiser());
-raslare.add(resetBtn);
-
+    JButton resetBtn = new JButton("Réinitialiser");
+    resetBtn.addActionListener(e -> reinitialiser());
+    raslare.add(resetBtn);
 
 
 
-JPanel boutons = new JPanel();
-boutons.add(zoomMoins);
-boutons.add(zoomPlus);
-boutons.add(resetZoom);
-boutons.add(ouvrirBtn);
-boutons.add(sauvegarderBtn);
 
-raslare.add(boutons);
+    JPanel boutons = new JPanel();
+    boutons.add(zoomMoins);
+    boutons.add(zoomPlus);
+    boutons.add(resetZoom);
+    boutons.add(ouvrirBtn);
+    boutons.add(sauvegarderBtn);
+
+    raslare.add(boutons);
 
     // --- MISE EN PAGE FINALE ---
     add(new JScrollPane(codeArea), BorderLayout.NORTH);
@@ -328,7 +328,9 @@ private void afficherErreurs() {
     
     FenetreErreurs fen = new FenetreErreurs(this, erreurs); // `erreurs` est ta liste
     fen.setVisible(true);
-    JOptionPane.showMessageDialog(this, "Aucune erreur trouvée !");
+    if(erreurs.isEmpty()){
+        JOptionPane.showMessageDialog(this, "Aucune erreur trouvée !");
+    }
 }
 
 private void reinitialiser() {
@@ -632,6 +634,8 @@ static class ArbrePanel extends JPanel {
             fillColor = new Color(255, 230, 180);
         } else if (n instanceof parcer.block_de_noeuds) {
             fillColor = new Color(200, 255, 200);
+        } else if (n instanceof parcer.noeud_sinonSi) {
+            fillColor = new Color(255, 230, 180);
         } else if (n instanceof parcer.noeud_d_operation_binaire) {
             fillColor = new Color(180, 220, 255);
         } else if (n instanceof parcer.noeud_d_asignation) {
@@ -644,8 +648,16 @@ static class ArbrePanel extends JPanel {
             fillColor = new Color(255, 185, 223);
         } else if (n instanceof parcer.noeud_de_condition) {
             fillColor = new Color(222, 171, 109);
+        } else if (n instanceof parcer.noeud_zakaria) {
+            fillColor = new Color(255, 230, 130);
+        } else if (n instanceof parcer.noeud_tafoukt) {
+            fillColor = new Color(255, 122, 30);
+        } else if (n instanceof parcer.noeud_return) {
+            fillColor = new Color(0, 155, 108);
         } else if (n instanceof parcer.VariableNode) {
-            fillColor = new Color(143, 255, 248);
+            fillColor = new Color(30, 155, 158);
+        } else if (n instanceof parcer.noeud_parametre) {
+            fillColor = new Color(255, 0, 0);
         } else {
             fillColor = new Color(230, 230, 250);
         }
@@ -696,7 +708,8 @@ static class ArbrePanel extends JPanel {
 
         try {
             if (n instanceof parcer.programmeNoeud) return "Programme";
-            if (n instanceof parcer.noeud_si) return "Si";
+            if (n instanceof parcer.noeud_si) return  "Si";
+            if (n instanceof parcer.noeud_sinonSi) return  "Sinon si";
             if (n instanceof parcer.block_de_noeuds) return "Bloc" + " : " + ((parcer.block_de_noeuds) n).type;
             if (n instanceof parcer.noeud_d_asignation a) return "Assign: " + a.identificateur;
             if (n instanceof parcer.noeud_de_condition c)
@@ -709,7 +722,10 @@ static class ArbrePanel extends JPanel {
                 return (op.operateur != null ? op.operateur.toString() : "op");
             if (n instanceof parcer.VariableNode)return n.getClass().getSimpleName() + " " + ((parcer.VariableNode) n).nom + " = " /*+ ((parcer.VariableNode) n).valeur*/;
             if (n instanceof parcer.ClasseNode)return ((parcer.ClasseNode) n).modificateur +" "+ n.getClass().getSimpleName() +" "+ ((parcer.ClasseNode) n).nom;
-            if (n instanceof parcer.MethodeNode)return ((parcer.MethodeNode) n).typeRetour +" "+ n.getClass().getSimpleName() +" "+ ((parcer.MethodeNode) n).nom;
+            if (n instanceof parcer.MethodeNode)return (((parcer.MethodeNode) n).modificateur != null ? ((parcer.MethodeNode) n).modificateur : "")+((parcer.MethodeNode) n).typeRetour +" "+ n.getClass().getSimpleName() +" "+ ((parcer.MethodeNode) n).nom;
+            if (n instanceof parcer.noeud_parametre)return n.toString();
+            if (n instanceof parcer.noeud_tafoukt)return ((parcer.noeud_tafoukt) n).toString() +" "+ n.getClass().getSimpleName() ;
+            if (n instanceof parcer.noeud_zakaria)return ((parcer.noeud_zakaria) n).toString() +" "+ n.getClass().getSimpleName() ;
             
             return n.getClass().getSimpleName();
         } catch (Exception e) {
@@ -727,7 +743,13 @@ static class ArbrePanel extends JPanel {
             if (si.condition != null) list.add(si.condition);
             if (si.blockAlors != null) list.add(si.blockAlors);
             if (si.block_sinon != null) list.add(si.block_sinon);
-        } else if (n instanceof parcer.block_de_noeuds b) {
+            if (si.block_sinonSi != null) list.add(si.block_sinonSi);
+        } else if (n instanceof parcer.noeud_sinonSi si) {
+            if (si.condition != null) list.add(si.condition);
+            if (si.blockAlors != null) list.add(si.blockAlors);
+            if (si.block_sinon != null) list.add(si.block_sinon);
+            if (si.block_sinonSi != null) list.add(si.block_sinonSi);
+        }else if (n instanceof parcer.block_de_noeuds b) {
             if (b.mots != null) list.addAll(b.mots);
         } else if (n instanceof parcer.noeud_d_asignation a) {
             if (a.valeur != null) list.add(a.valeur);
@@ -738,9 +760,17 @@ static class ArbrePanel extends JPanel {
             if (c.membres != null) list.addAll(c.membres);
         }else if (n instanceof parcer.MethodeNode m) {
             if (m.instructions != null) list.addAll(m.instructions);
+            if (m.Pretour != null) list.addAll(m.Pretour);
         }else if (n instanceof parcer.VariableNode v) {
             if (v.valeur != null) list.add(v.valeur);
+        }else if (n instanceof parcer.noeud_tafoukt v) {
+            if (v.valeur != null) list.add(v.valeur);
+        }else if (n instanceof parcer.noeud_zakaria v) {
+            if (v.valeur != null) list.add(v.valeur);
+        }else if (n instanceof parcer.noeud_return v) {
+            if (v.valeur != null) list.add(v.valeur);
         }
+        
         // valeur and condition leafs will return empty list
         return list;
     }
