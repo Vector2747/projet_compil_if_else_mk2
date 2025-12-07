@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch4jConfig>
+  <dontWrapJar>false</dontWrapJar>
+  <headerType>gui</headerType>
+  <jar>C:\Users\InfoPro\Documents\NetBeansProjects\projet_compil_if_else_2\projectIfElseMk2\projet_compil_if_else_2-1.0-SNAPSHOT-jar-with-dependencies.jar</jar>
+  <outfile>C:\Users\InfoPro\Desktop\compilator_aligatorMk2.exe</outfile>
+  <errTitle></errTitle>
+  <cmdLine></cmdLine>
+  <chdir>.</chdir>
+  <priority>normal</priority>
+  <downloadUrl></downloadUrl>
+  <supportUrl></supportUrl>
+  <stayAlive>false</stayAlive>
+  <restartOnCrash>false</restartOnCrash>
+  <manifest></manifest>
+  <icon>C:\Users\InfoPro\Downloads\compiler.ico</icon>
+  <jre>
+    <path>%JAVA_HOME%;%PATH%</path>
+    <requiresJdk>false</requiresJdk>
+    <requires64Bit>false</requires64Bit>
+    <minVersion>23</minVersion>
+    <maxVersion></maxVersion>
+  </jre>
+  <versionInfo>
+    <fileVersion>1.0.0.3</fileVersion>
+    <txtFileVersion>free fire</txtFileVersion>
+    <fileDescription>Analyseur if else</fileDescription>
+    <copyright>© 2025 Zaki</copyright>
+    <productVersion>1.0.0.3</productVersion>
+    <txtProductVersion>free fire</txtProductVersion>
+    <productName>Projet Compilateur If/Else</productName>
+    <companyName>tank damages</companyName>
+    <internalName>AnalyseurIfElse</internalName>
+    <originalFilename>AnalyseurIfElse.exe</originalFilename>
+    <trademarks></trademarks>
+    <language>ENGLISH_US</language>
+  </versionInfo>
+</launch4jConfig>
